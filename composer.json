@@ -1,5 +1,5 @@
 {
-  "name": "riyad/hooks",
+  "name": "devriyad/hooks",
   "description": "Lightweight, synchronous, WordPress-style hook system for PHP, production-grade, type-safe and extensible.",
   "type": "library",
   "license": "MIT",
