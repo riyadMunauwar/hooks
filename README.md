@@ -1,14 +1,19 @@
-```markdown
-# Riyad Hooks
+```md
+# riyad/hooks
 
-> A lightweight, modern, WordPress-style Hook System for PHP.
+> 🪝 A lightweight, synchronous, WordPress-style hook system for modern PHP — production-grade, extensible, and type-safe.
 
 ---
 
-## 🚀 Overview
+## 🚀 Features
 
-**Riyad Hooks** brings the simplicity of WordPress **actions** and **filters** to modern PHP —  
-with a fully object-oriented, type-safe architecture and support for **wildcard hooks**.
+✅ WordPress-style **actions** & **filters**  
+✅ **Singleton** pattern for global consistency  
+✅ Optional **functional helpers** (`add_action`, `apply_filters`, etc.)  
+✅ **Enable/disable** helpers dynamically  
+✅ **Clean OOP** design with interfaces  
+✅ **Composer + PSR-4** compliant  
+✅ **Production-ready**, no async or caching  
 
 ---
 
@@ -18,127 +23,84 @@ with a fully object-oriented, type-safe architecture and support for **wildcard 
 composer require devriyad/hooks
 ````
 
+Requires **PHP ≥ 8.1**
+
 ---
 
 ## ⚙️ Basic Usage
 
 ```php
-<?php
-require __DIR__ . '/vendor/autoload.php';
+use Riyad\Hooks\Hook;
 
-add_action('init', function () {
-    echo "App initialized!";
-});
+$hook = Hook::instance();
 
-add_filter('title', function ($title) {
-    return strtoupper($title);
-});
+// Add an action
+$hook->addAction('init', fn() => print "Initialized!\n");
+$hook->doAction('init');
 
-do_action('init');
-echo apply_filters('title', 'hello world');
-```
-
-Output:
-
-```
-App initialized!
-HELLO WORLD
+// Add a filter
+$hook->addFilter('title', fn($title) => strtoupper($title));
+echo $hook->applyFilters('title', 'hello world'); // HELLO WORLD
 ```
 
 ---
 
-## 🧩 Object Method Example
+## 🧩 Enable Functional Helpers
 
 ```php
-class App {
-    public function boot() {
-        add_action('init', [$this, 'onInit']);
-        add_filter('title', [$this, 'formatTitle']);
-    }
+$hook = Hook::instance();
+$hook->enableHelpers();
 
-    public function onInit() {
-        echo "System initialized!\n";
-    }
+add_action('boot', fn() => print "Booting...\n");
+do_action('boot');
 
-    public function formatTitle($title) {
-        return "🔥 " . ucfirst($title);
-    }
-}
-
-$app = new App();
-$app->boot();
-
-do_action('init');
-echo apply_filters('title', 'welcome');
-```
-
-Output:
-
-```
-System initialized!
-🔥 Welcome
+add_filter('message', fn($msg) => strtoupper($msg));
+echo apply_filters('message', 'hello world');
 ```
 
 ---
 
-## ✨ Wildcard Hooks
+## 🔧 Configuration
 
 ```php
-add_action('user.*', function ($user) {
-    echo "User action: {$user->name}\n";
-});
-
-do_action('user.login', (object)['name' => 'Riyad']);
-do_action('user.logout', (object)['name' => 'Khairul']);
+$hook->disableHelpers(); // Disable global functions
+$hook->helpersEnabled(); // true or false
+$hook->getDispatcher();  // Access underlying dispatcher
 ```
-
-Output:
-
-```
-User action: Riyad
-User action: Khairul
-```
-
----
-
-## 🧠 Features
-
-✅ WordPress-style syntax (`add_action`, `add_filter`)
-✅ Supports closures, object methods, and static callables
-✅ Wildcard hook matching
-✅ Type-safe and PSR-4 compliant
-✅ Lightweight, no dependencies
-✅ Fully synchronous execution
 
 ---
 
 ## 🧱 Architecture
 
 ```
-riyad-hooks/
+devriyad-hooks/
 ├── src/
 │   ├── Contracts/
-│   ├── Exceptions/
-│   ├── Utils/
+│   │   └── EventInterface.php
+│   │   └── DispatcherInterface.php
+│   │   └── HookInterface.php
+│   ├── Hook.php
+│   ├── Dispatcher.php
 │   ├── Event.php
 │   ├── Listener.php
 │   ├── ListenerCollection.php
-│   └── Dispatcher.php
+│   ├── Helpers/functions.php
+│   └── Exceptions/
+│       ├── InvalidListenerException.php
+│       └── EventDispatchException.php
 ├── docs/
 │   ├── USAGE.md
 │   └── DESIGN.md
-├── tests/
 ├── composer.json
-├── README.md
-└── LICENSE
+└── README.md
 ```
 
 ---
 
-## 📚 Documentation
+## 📘 Documentation
 
-* [Usage Guide](docs/USAGE.md)
-* [Design Documentation](docs/DESIGN.md)
+* [Usage Guide](./docs/USAGE.md)
+* [Design Overview](./docs/DESIGN.md)
 
 ---
 
@@ -146,12 +108,13 @@ riyad-hooks/
 
 **Riyad Munauwar**
 📧 [riyadmunauwar@gmail.com](mailto:riyadmunauwar@gmail.com)
+📦 Package: `devriyad/hooks`
 
 ---
 
-## 📄 License
+## ⚖️ License
 
-MIT License © 2025 Riyad Munauwar
-You are free to use, modify, and distribute this software with attribution.
+Licensed under the **MIT License**.
+© 2025 Riyad Munauwar. All rights reserved.
 
-
+```

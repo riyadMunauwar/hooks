@@ -1,179 +1,161 @@
-````markdown
-# Riyad Hooks - Usage Guide
+````md
+# Usage Guide — riyad/hooks
 
-This document shows how to use **Riyad Hooks**, a modern, WordPress-style Hook System built in pure PHP.
+This document explains how to use the `riyad/hooks` package — a **lightweight, synchronous, WordPress-style hook system** for PHP applications.
 
 ---
 
-## 1. Installation
+## 🧩 Installation
 
-Install the package using Composer:
+Install via Composer:
 
 ```bash
 composer require riyad/hooks
 ````
 
-Then include the Composer autoloader:
+Requires **PHP 8.1+**.
+
+---
+
+## 🚀 Getting Started
+
+### 1. Autoload
+
+Ensure Composer autoloading is enabled in your project entry file:
 
 ```php
-require __DIR__ . '/vendor/autoload.php';
+require_once __DIR__ . '/vendor/autoload.php';
 ```
 
 ---
 
-## 2. Introduction
+## 🔧 Basic Usage
 
-**Riyad Hooks** provides two main types of hooks:
+The `Hook` class provides a clean, singleton-based API for managing **actions** and **filters**.
 
-* **Actions** → perform side effects (logging, sending mail, etc.)
-* **Filters** → modify and return data
+### Example
 
-Both follow a **WordPress-like API**, but implemented with modern PHP features, interfaces, and strict typing.
+```php
+use Riyad\Hooks\Hook;
+
+$hook = Hook::instance();
+
+// Add an action
+$hook->addAction('init', fn() => print "App initialized!\n");
+$hook->doAction('init');
+
+// Add a filter
+$hook->addFilter('title', fn($title) => strtoupper($title));
+echo $hook->applyFilters('title', 'hello world'); // HELLO WORLD
+```
 
 ---
 
-## 3. Actions
+## ⚙️ Using Functional Helpers
 
-### Add an Action
-
-```php
-add_action('app.init', function () {
-    echo "Application started!";
-});
-```
-
-### Trigger the Action
+If you prefer WordPress-style functions like `add_action()` or `apply_filters()`,
+you can **enable** the procedural helper functions:
 
 ```php
-do_action('app.init');
+$hook = Hook::instance();
+$hook->enableHelpers();
 ```
 
-Output:
+Once enabled, the following global functions become available:
 
-```
-Application started!
-```
+| Type   | Function                                      | Description                     |
+| ------ | --------------------------------------------- | ------------------------------- |
+| Filter | `add_filter($tag, $callback, $priority = 10)` | Register a filter callback      |
+| Filter | `apply_filters($tag, $value, ...$args)`       | Apply all filters for a tag     |
+| Filter | `remove_filter($tag, $listenerId)`            | Remove a specific filter        |
+| Filter | `remove_all_filters($tag)`                    | Remove all filters for a tag    |
+| Filter | `has_filter($tag)`                            | Check if filters exist          |
+| Action | `add_action($tag, $callback, $priority = 10)` | Register an action callback     |
+| Action | `do_action($tag, ...$args)`                   | Run all callbacks for an action |
+| Action | `remove_action($tag, $listenerId)`            | Remove a specific action        |
+| Action | `remove_all_actions($tag)`                    | Remove all actions for a tag    |
+| Action | `has_action($tag)`                            | Check if actions exist          |
 
-### Remove Actions
+Example:
 
 ```php
-remove_action('app.init', $listenerId);
-remove_all_actions('app.init');
+$hook = Hook::instance();
+$hook->enableHelpers();
+
+add_action('boot', fn() => print "Booting app...\n");
+do_action('boot');
+
+add_filter('message', fn($msg) => strtoupper($msg));
+echo apply_filters('message', 'hello world');
 ```
 
-### Check for Action
+---
+
+## 🧠 Disabling Helpers
 
 ```php
-if (has_action('app.init')) {
-    echo "Action exists.";
+$hook->disableHelpers();
+```
+
+This prevents `functions.php` from loading automatically in contexts like testing, multi-package environments, or frameworks where global functions may conflict.
+
+---
+
+## 🧪 Checking Helpers Status
+
+```php
+if ($hook->helpersEnabled()) {
+    echo "Helpers are active!";
 }
 ```
 
 ---
 
-## 4. Filters
+## 🧱 Accessing the Dispatcher
 
-### Add a Filter
-
-```php
-add_filter('content.title', function ($title) {
-    return ucfirst($title);
-});
-```
-
-### Apply Filter
+You can access the underlying `Dispatcher` instance for advanced event handling:
 
 ```php
-$title = apply_filters('content.title', 'hello world');
-echo $title; // Output: Hello world
-```
-
-### Remove Filters
-
-```php
-remove_filter('content.title', $listenerId);
-remove_all_filters('content.title');
+$dispatcher = $hook->getDispatcher();
 ```
 
 ---
 
-## 5. Using Object Methods
+## ✅ Summary
 
-You can register class methods just like in WordPress:
+| Feature          | Description                                              |
+| ---------------- | -------------------------------------------------------- |
+| Actions          | Execute callbacks (like `do_action` in WordPress)        |
+| Filters          | Transform values before returning (like `apply_filters`) |
+| Singleton        | Global access to the same dispatcher                     |
+| Helpers          | Optional global WordPress-like functions                 |
+| PSR-4            | Clean autoloading, fully namespaced                      |
+| Production-ready | Tested, typed, and extensible                            |
+
+---
+
+## 🧩 Example Project
 
 ```php
-class Blog {
-    public function boot() {
-        add_action('init', [$this, 'onInit']);
-        add_filter('title', [$this, 'formatTitle']);
-    }
+use Riyad\Hooks\Hook;
 
-    public function onInit() {
-        echo "Blog initialized!";
-    }
+$hook = Hook::instance();
+$hook->enableHelpers();
 
-    public function formatTitle(string $title): string {
-        return "📖 " . strtoupper($title);
-    }
-}
+// OOP
+$hook->addAction('init', fn() => print "Initialized\n");
+$hook->doAction('init');
 
-$blog = new Blog();
-$blog->boot();
-
-do_action('init');
-echo apply_filters('title', 'welcome home');
+// Functional
+add_filter('greet', fn($name) => "Hello, $name!");
+echo apply_filters('greet', 'Riyad');
 ```
 
 Output:
 
 ```
-Blog initialized!
-📖 WELCOME HOME
+Initialized
+Hello, Riyad!
 ```
-
----
-
-## 6. Wildcard Hooks
-
-**Riyad Hooks** supports wildcard matching.
-You can listen to multiple events using patterns like `user.*`.
-
-```php
-add_action('user.*', function ($user) {
-    echo "User action triggered: {$user->name}";
-});
-
-do_action('user.register', (object)['name' => 'Riyad']);
-do_action('user.login', (object)['name' => 'Khairul']);
-```
-
-Output:
-
-```
-User action triggered: Riyad
-User action triggered: Khairul
-```
-
----
-
-## 7. Summary of Helper Functions
-
-| Type    | Function Names                                                                               |
-| ------- | -------------------------------------------------------------------------------------------- |
-| Filters | `add_filter()`, `remove_filter()`, `apply_filters()`, `has_filter()`, `remove_all_filters()` |
-| Actions | `add_action()`, `remove_action()`, `do_action()`, `has_action()`, `remove_all_actions()`     |
-
----
-
-## 8. Notes
-
-* Hooks are **synchronous**.
-* Execution order follows **priority** (default: 10).
-* Supports any **valid PHP callable**.
-* Designed for modern PHP (8.1+).
-
----
 
 ````
-
----

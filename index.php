@@ -5,6 +5,19 @@ declare(strict_types=1);
 // Autoload Composer packages
 require __DIR__ . '/vendor/autoload.php';
 
+use Riyad\Hooks\Hook;
+
+$hook = Hook::instance();
+$hook->enableHelpers();
+
+// Add an action
+// $hook->addAction('init', fn() => print "App initialized!\n");
+// $hook->doAction('init');
+
+// // Add a filter
+// $hook->addFilter('title', fn($title) => strtoupper($title));
+// echo $hook->applyFilters('title', 'hello world'); // HELLO WORLD
+
 // -----------------------------
 // Example Data
 // -----------------------------
