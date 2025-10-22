@@ -9,20 +9,20 @@ use Riyad\Hooks\Event;
 use Riyad\Hooks\Dispatcher;
 
 /**
- * Class HookManager
+ * Class Hook
  *
- * A singleton, object-oriented wrapper for WordPress-style
- * actions and filters built on top of the Dispatcher.
+ * A flexible hook manager that can act as:
+ *  - Singleton (shared instance across app)
+ *  - Normal object (many instances)
  *
  * Example:
- *  $hooks = HookManager::instance();
- *  $hooks->addAction('init', fn() => echo "Initialized");
- *  $hooks->doAction('init');
+ *  $hook = Hook::instance(); // Singleton mode
+ *  $hook2 = Hook::make();    // Many-object mode
  */
 class Hook implements HookInterface
 {
     /**
-     * The single instance of the HookManager.
+     * The single instance of Hook.
      */
     private static ?Hook $instance = null;
 
@@ -37,7 +37,12 @@ class Hook implements HookInterface
     private bool $helpersEnabled = false;
 
     /**
-     * Private constructor for singleton.
+     * Whether singleton mode is globally enabled.
+     */
+    private static bool $singletonMode = true;
+
+    /**
+     * Private constructor for controlled instantiation.
      */
     private function __construct()
     {
@@ -45,26 +50,52 @@ class Hook implements HookInterface
     }
 
     /**
-     * Get the singleton instance.
-     *
-     * @return Hook
+     * Enable singleton mode globally.
+     */
+    public static function enableSingleton(): void
+    {
+        self::$singletonMode = true;
+    }
+
+    /**
+     * Disable singleton mode globally.
+     */
+    public static function disableSingleton(): void
+    {
+        self::$singletonMode = false;
+        self::$instance = null;
+    }
+
+    /**
+     * Get a Hook instance based on current mode.
+     * - If singleton mode: returns the same shared instance.
+     * - If not: returns a new instance every time.
      */
     public static function instance(): Hook
     {
-        if (self::$instance === null) {
-            self::$instance = new self();
+        if (self::$singletonMode) {
+            if (self::$instance === null) {
+                self::$instance = new self();
+            }
+            return self::$instance;
         }
 
-        return self::$instance;
+        // Many-object mode
+        return new self();
+    }
+
+    /**
+     * Always returns a new instance (ignores singleton mode).
+     */
+    public static function make(): Hook
+    {
+        return new self();
     }
 
     /* ========================================================
      *  FILTER METHODS
      * ====================================================== */
 
-    /**
-     * Add a filter hook.
-     */
     public function addFilter(string $tag, callable $callback, int $priority = 10): string
     {
         return $this->dispatcher->addListener(
@@ -77,9 +108,6 @@ class Hook implements HookInterface
         );
     }
 
-    /**
-     * Apply all filters attached to a hook.
-     */
     public function applyFilters(string $tag, mixed $value, mixed ...$args): mixed
     {
         $event = new Event("filter.$tag", [
@@ -92,17 +120,11 @@ class Hook implements HookInterface
         return $event->get('value');
     }
 
-    /**
-     * Remove a filter listener by ID.
-     */
     public function removeFilter(string $tag, string $listenerId): void
     {
         $this->dispatcher->removeListener("filter.$tag", $listenerId);
     }
 
-    /**
-     * Remove all filters for a given tag.
-     */
     public function removeAllFilters(string $tag): void
     {
         foreach ($this->dispatcher->getListeners("filter.$tag") as $listener) {
@@ -110,9 +132,6 @@ class Hook implements HookInterface
         }
     }
 
-    /**
-     * Check if a filter hook has listeners.
-     */
     public function hasFilter(string $tag): bool
     {
         return count($this->dispatcher->getListeners("filter.$tag")) > 0;
@@ -122,9 +141,6 @@ class Hook implements HookInterface
      *  ACTION METHODS
      * ====================================================== */
 
-    /**
-     * Add an action hook.
-     */
     public function addAction(string $tag, callable $callback, int $priority = 10): string
     {
         return $this->dispatcher->addListener(
@@ -136,26 +152,17 @@ class Hook implements HookInterface
         );
     }
 
-    /**
-     * Execute all actions attached to a hook.
-     */
     public function doAction(string $tag, mixed ...$args): void
     {
         $event = new Event("action.$tag", ['args' => $args]);
         $this->dispatcher->dispatch($event);
     }
 
-    /**
-     * Remove an action listener by ID.
-     */
     public function removeAction(string $tag, string $listenerId): void
     {
         $this->dispatcher->removeListener("action.$tag", $listenerId);
     }
 
-    /**
-     * Remove all action listeners for a tag.
-     */
     public function removeAllActions(string $tag): void
     {
         foreach ($this->dispatcher->getListeners("action.$tag") as $listener) {
@@ -163,20 +170,15 @@ class Hook implements HookInterface
         }
     }
 
-    /**
-     * Check if an action hook has listeners.
-     */
     public function hasAction(string $tag): bool
     {
         return count($this->dispatcher->getListeners("action.$tag")) > 0;
     }
 
-    /**
-     * Enable functional helper functions (functions.php)
-     * for global usage.
-     *
-     * @return void
-     */
+    /* ========================================================
+     *  HELPERS
+     * ====================================================== */
+
     public function enableHelpers(): void
     {
         if (!$this->helpersEnabled) {
@@ -188,27 +190,15 @@ class Hook implements HookInterface
         }
     }
 
-    /**
-     * Disable helpers — prevents loading functional style.
-     *
-     * Note: Once loaded, PHP cannot "unload" functions,
-     * but this flag ensures they won't load twice or in tests.
-     *
-     * @return void
-     */
     public function disableHelpers(): void
     {
         $this->helpersEnabled = false;
     }
 
-    /**
-     * Check if helper functions are enabled.
-     */
     public function helpersEnabled(): bool
     {
         return $this->helpersEnabled;
     }
-
 
     /**
      * Get the underlying Dispatcher instance.
